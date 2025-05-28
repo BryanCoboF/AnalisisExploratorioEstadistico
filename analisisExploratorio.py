@@ -22,13 +22,26 @@ class AnalisisExploratorio:
             return self.__df
         else: raise ValueError("El df no existe no se puede retornar")
 
-    def ejecutar_analisis_exploratorio(self):
+    def ejecutar_analisis_exploratorio_completo(self):
         self.__importar_data_excel()
         self.__imprimir_datos()
         self.__cardinalidad()
         self.__estadisticas_descriptivas()
         self.__analisis_distribucion_numericas()
         self.__matriz_correlacion()
+
+    def ejecutar_analisis_correlacion(self):
+        self.__importar_data_excel()
+        self.__cardinalidad()
+        self.__estadisticas_descriptivas()
+        self.__matriz_correlacion()
+
+    def ejecutar_analisis_volatilidad(self):
+        self.__importar_data_excel()
+        self.__cardinalidad()
+        self.__estadisticas_descriptivas()
+        self.__volatilidad()
+
 
 
     def __importar_data_excel(self):
@@ -179,18 +192,57 @@ class AnalisisExploratorio:
 
         matriz_correlacion = df_numerico.corr(method="pearson")
 
-        plt.figure(figsize=(12,10))
-        sns.heatmap(matriz_correlacion, annot=True, cmap="coolwarm", fmt=".2f", linewidths=0.5)
-        plt.title("Matriz Correlación")
+        n_vars = len(matriz_correlacion.columns)
+        fig_size = max(10, n_vars*0.6)
+
+        plt.figure(figsize=(fig_size, fig_size))
+        sns.heatmap(matriz_correlacion, annot=True, cmap="coolwarm", fmt=".2f", linewidths=0.5, cbar=True, annot_kws={"size": 8})
+        plt.xticks(rotation=45, ha="right",fontsize=8)
+        plt.yticks(rotation=0, fontsize=8)
+        plt.title("Matriz Correlación", fontsize=10)
+        plt.tight_layout()
         plt.show()
 
 
+    def __variacion_porcencual_fecha(self, nombre_col_fecha):
+        if self.__df is None:
+            print("No existe el df no se puede obtener la volatilidad")
+            return
 
+        if nombre_col_fecha not in self.__df.columns:
+            print("No se tiene una columna fecha corte, no se puede calcular la variación de los indicadores")
+            return
+
+        self.__df[nombre_col_fecha] = self.__df.sort_values(by=nombre_col_fecha)
+
+        fechas = self.__df[nombre_col_fecha].iloc[1:].reset_index(drop=True)
+
+        df_numerico = self.__df.select_dtypes(include=[np.number])
+
+        if df_numerico.empty:
+            print("El df no tiene columnas numéricas no se puede obtener la volatilidad")
+            return
+
+
+        retornos = df_numerico.pct_change().replace([np.inf, -np.inf], np.nan).dropna()  # Calculando los retornos evitando división por cero
+        retornos[nombre_col_fecha] = fechas
+
+        
+
+
+        volatilidad = retornos.std()
+        print("****** Retornos ******")
+        print(tabulate(retornos, headers="keys", tablefmt="fancy_grid"))
+
+        print("---- Volatilidad-------")
+        print(volatilidad)
 
 
 if __name__ == '__main__':
     analizador = AnalisisExploratorio()
-    analizador.ejecutar_analisis_exploratorio()
+    #analizador.ejecutar_analisis_exploratorio()
+    #analizador.ejecutar_analisis_correlacion()
+    analizador.ejecutar_analisis_volatilidad()
 
 
 
