@@ -36,11 +36,11 @@ class AnalisisExploratorio:
         self.__estadisticas_descriptivas()
         self.__matriz_correlacion()
 
-    def ejecutar_analisis_volatilidad(self):
+    def ejecutar_analisis_volatilidad(self, nombre_col_fecha):
         self.__importar_data_excel()
         self.__cardinalidad()
         self.__estadisticas_descriptivas()
-        self.__volatilidad()
+        self.__variacion_porcencual_fecha(nombre_col_fecha)
 
 
 
@@ -203,7 +203,6 @@ class AnalisisExploratorio:
         plt.tight_layout()
         plt.show()
 
-
     def __variacion_porcencual_fecha(self, nombre_col_fecha):
         if self.__df is None:
             print("No existe el df no se puede obtener la volatilidad")
@@ -213,9 +212,10 @@ class AnalisisExploratorio:
             print("No se tiene una columna fecha corte, no se puede calcular la variación de los indicadores")
             return
 
-        self.__df[nombre_col_fecha] = self.__df.sort_values(by=nombre_col_fecha)
+        # Ordenar todo el DataFrame por fecha (corrección aquí)
+        self.__df = self.__df.sort_values(by=nombre_col_fecha).reset_index(drop=True)
 
-        fechas = self.__df[nombre_col_fecha].iloc[1:].reset_index(drop=True)
+        fechas = self.__df[nombre_col_fecha].iloc[0:].reset_index(drop=True)
 
         df_numerico = self.__df.select_dtypes(include=[np.number])
 
@@ -223,26 +223,44 @@ class AnalisisExploratorio:
             print("El df no tiene columnas numéricas no se puede obtener la volatilidad")
             return
 
-
-        retornos = df_numerico.pct_change().replace([np.inf, -np.inf], np.nan).dropna()  # Calculando los retornos evitando división por cero
+        retornos = df_numerico.pct_change().replace([np.inf, -np.inf], np.nan).fillna(0)
         retornos[nombre_col_fecha] = fechas
 
-        
-
-
-        volatilidad = retornos.std()
-        print("****** Retornos ******")
         print(tabulate(retornos, headers="keys", tablefmt="fancy_grid"))
 
-        print("---- Volatilidad-------")
-        print(volatilidad)
+
+
+        for col in retornos.columns:
+            if col != nombre_col_fecha:
+                plt.figure(figsize=(12, 6))
+                plt.plot(retornos[nombre_col_fecha], retornos[col], "b-", label=f"Retornos {col}")
+                prom_tot = retornos["Grand Total"].mean()
+                std_tot = retornos["Grand Total"].std()
+                prom = retornos[col].mean()
+                std = retornos[col].std()
+
+                plt.axhline(y=prom + std , color="red", linestyle="--", label="Lim sup (95% CI)")
+                plt.axhline(y=prom - std , color="red", linestyle="--", label="Lim inf (95% CI)")
+                #plt.axhline(y=prom_tot + std_tot * 1.96, color="orange", linestyle="--", label="Lim sup (95% CI)")
+                #plt.axhline(y=prom_tot - std_tot * 1.96, color="orange", linestyle="--", label="Lim inf (95% CI)")
+                plt.axhline(y=prom, color="green", linestyle="--", label="Promedio")
+                plt.title(f"Retornos de {col} con Intervalo de Confianza 95%")
+                plt.xlabel("Fecha Corte")
+                plt.ylabel(f"Retorno porcentual {col}")
+                plt.legend()
+                plt.grid(True)
+                plt.xticks(rotation=45)
+                plt.tight_layout()
+                plt.show()
+
+
 
 
 if __name__ == '__main__':
     analizador = AnalisisExploratorio()
     #analizador.ejecutar_analisis_exploratorio()
     #analizador.ejecutar_analisis_correlacion()
-    analizador.ejecutar_analisis_volatilidad()
+    analizador.ejecutar_analisis_volatilidad("Fecha Corte")
 
 
 
