@@ -254,13 +254,8 @@ class AnalisisExploratorio:
                 plt.show()
 
 
-
-
 if __name__ == '__main__':
     analizador = AnalisisExploratorio()
     #analizador.ejecutar_analisis_exploratorio()
     #analizador.ejecutar_analisis_correlacion()
     analizador.ejecutar_analisis_volatilidad("Fecha Corte")
-
-
-
